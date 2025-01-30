@@ -6,14 +6,12 @@ import altair as alt
 
 st.set_page_config(page_title="Dashboard de Delitos en Argentina", layout="wide")
 
-# Cargar los datos
 @st.cache_data
 def cargar_datos():
     return pd.read_csv("snic-provincias.csv")
 
 datos = cargar_datos()
 
-# Estilos CSS personalizados
 st.markdown(
     """
     <style>
@@ -42,23 +40,19 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Título principal
 st.markdown("<div class='titulo-principal'>🔍 Dashboard Interactivo: Análisis de Delitos en Argentina</div>", unsafe_allow_html=True)
 
-# Barra lateral para navegación
 menu = st.sidebar.radio(
     "Navegación",
     ["Introducción", "Distribución Geográfica", "Tipos de Delitos", "Distribución de Víctimas", "Relaciones entre Variables", "Provincias con tasas destacadas", "Conclusión General"]
 )
 
-# Filtros disponibles en la barra lateral
 st.sidebar.header("Filtros")
 provincia = st.sidebar.multiselect("Selecciona una o más provincias", datos["provincia_nombre"].unique(), default=datos["provincia_nombre"].unique()[:3])
 año = st.sidebar.slider("Selecciona un rango de años", int(datos["anio"].min()), int(datos["anio"].max()), (2000, 2023))
 tipo_delito = st.sidebar.multiselect("Selecciona tipos de delito", datos["codigo_delito_snic_nombre"].unique(), default=datos["codigo_delito_snic_nombre"].unique()[:5])
 tasa_min, tasa_max = st.sidebar.slider("Rango de tasa ajustada (hechos por 100,000 habitantes)", float(datos["tasa_hechos"].min()), float(datos["tasa_hechos"].max()), (0.0, float(datos["tasa_hechos"].max())))
 
-# Filtrar los datos en base a los controles
 datos_filtrados = datos[
     (datos["provincia_nombre"].isin(provincia)) &
     (datos["anio"] >= año[0]) & (datos["anio"] <= año[1]) &
@@ -103,22 +97,19 @@ if menu == "Introducción":
 elif menu == "Distribución Geográfica":
     st.markdown("<div class='subtitulo'>Distribución Geográfica</div>", unsafe_allow_html=True)
     
-    # Preparar los datos
     tasas_df = tasas_provincias.reset_index().rename(columns={"provincia_nombre": "Provincia", "tasa_hechos": "Tasa Promedio"})
     
-    # Crear el gráfico de barras interactivo
     chart = alt.Chart(tasas_df).mark_bar().encode(
         y=alt.Y("Provincia:N", sort="-x", title="Provincias"),
         x=alt.X("Tasa Promedio:Q", title="Tasa Promedio de Delitos"),
-        color=alt.Color("Tasa Promedio:Q", scale=alt.Scale(scheme="blues")),  # Colores personalizados
-        tooltip=["Provincia", "Tasa Promedio"]  # Mostrar información al pasar el cursor
+        color=alt.Color("Tasa Promedio:Q", scale=alt.Scale(scheme="blues")), 
+        tooltip=["Provincia", "Tasa Promedio"]  
     ).properties(
         width=600,
         height=400,
         title="Distribución Geográfica de las Tasas de Delitos en Argentina"
     )
 
-    # Mostrar el gráfico en Streamlit
     st.altair_chart(chart, use_container_width=True)
 
 
@@ -127,16 +118,13 @@ elif menu == "Distribución Geográfica":
 elif menu == "Tipos de Delitos":
     st.markdown("<div class='subtitulo'>Tipos de Delitos</div>", unsafe_allow_html=True)
     
-    # Obtener los 10 delitos más comunes
     delitos_comunes = datos_filtrados["codigo_delito_snic_nombre"].value_counts().head(10)
     
-    # Crear un gráfico de barras muy compacto con matplotlib
-    fig, ax = plt.subplots(figsize=(3, 2))  # Gráfico más pequeño
-    colores = sns.color_palette("Set3", len(delitos_comunes))  # Paleta de colores suaves
+    fig, ax = plt.subplots(figsize=(3, 2))  
+    colores = sns.color_palette("Set3", len(delitos_comunes))  
     
-    barras = ax.barh(delitos_comunes.index[::-1], delitos_comunes.values[::-1], color=colores)  # Gráfico horizontal compacto
+    barras = ax.barh(delitos_comunes.index[::-1], delitos_comunes.values[::-1], color=colores)
     
-    # Añadir los valores sobre las barras
     for i, barra in enumerate(barras):
         ax.text(barra.get_width() + 5, barra.get_y() + barra.get_height() / 2, 
                 f'{delitos_comunes.values[::-1][i]}', va='center', fontsize=7, color='black')
@@ -146,13 +134,11 @@ elif menu == "Tipos de Delitos":
     ax.set_ylabel("Tipo de Delito", fontsize=7)
     ax.tick_params(axis='both', which='major', labelsize=6)
     
-    # Eliminar espacio en blanco
     plt.tight_layout()
     
-    # Usar columnas para una mejor distribución
-    col1, col2, col3 = st.columns([1, 3, 1])  # Centrar el gráfico
+    col1, col2, col3 = st.columns([1, 3, 1])
     with col2:
-        st.pyplot(fig)  # Mostrar el gráfico centrado en la ventana
+        st.pyplot(fig) 
 
 
 
@@ -162,28 +148,25 @@ elif menu == "Tipos de Delitos":
 elif menu == "Distribución de Víctimas":
     st.markdown("<div class='subtitulo'>Distribución de Víctimas</div>", unsafe_allow_html=True)
     
-    # Preparar los datos en formato adecuado
     victimas_por_genero = datos_filtrados[["cantidad_victimas_masc", "cantidad_victimas_fem", "cantidad_victimas_sd"]].sum()
     victimas_df = pd.DataFrame({
         "Género": ["Masculino", "Femenino", "Sin Determinar"],
         "Cantidad de Víctimas": victimas_por_genero.values
     })
 
-    # Crear gráfico interactivo con altair
     chart = alt.Chart(victimas_df).mark_bar().encode(
         x=alt.X("Género", sort=["Masculino", "Femenino", "Sin Determinar"]),
         y="Cantidad de Víctimas",
         color=alt.Color("Género", scale=alt.Scale(
             domain=["Masculino", "Femenino", "Sin Determinar"],
-            range=["#1f77b4", "#e377c2", "#7f7f7f"]  # Colores personalizados
+            range=["#1f77b4", "#e377c2", "#7f7f7f"]  
         )),
         tooltip=["Género", "Cantidad de Víctimas"]
     ).properties(
-        width=400,  # Ajustar tamaño del gráfico
+        width=400,  
         height=300
     )
 
-    # Mostrar el gráfico en Streamlit
     st.altair_chart(chart, use_container_width=True)
 
 
@@ -191,22 +174,19 @@ elif menu == "Distribución de Víctimas":
 elif menu == "Relaciones entre Variables":
     st.markdown("<div class='subtitulo'>Relación entre cantidad de delitos y tasas ajustadas</div>", unsafe_allow_html=True)
     
-    # Agrupar los datos para el gráfico
     relacion_delitos = datos_filtrados.groupby("provincia_nombre")[["cantidad_hechos", "tasa_hechos"]].sum().reset_index()
 
-    # Crear el gráfico de dispersión interactivo
     scatter_chart = alt.Chart(relacion_delitos).mark_circle(size=80).encode(
         x=alt.X("cantidad_hechos", title="Cantidad total de delitos", scale=alt.Scale(zero=False)),
         y=alt.Y("tasa_hechos", title="Tasa ajustada (por 100,000 habitantes)", scale=alt.Scale(zero=False)),
-        color=alt.Color("provincia_nombre", legend=None, scale=alt.Scale(scheme='viridis')),  # Colores personalizados
-        tooltip=["provincia_nombre", "cantidad_hechos", "tasa_hechos"]  # Información emergente
+        color=alt.Color("provincia_nombre", legend=None, scale=alt.Scale(scheme='viridis')),  
+        tooltip=["provincia_nombre", "cantidad_hechos", "tasa_hechos"]  
     ).properties(
         width=500,
         height=400,
         title="Relación entre cantidad de delitos y tasas ajustadas por provincia"
-    ).interactive()  # Permite zoom y desplazamiento
+    ).interactive()  
 
-    # Mostrar el gráfico en Streamlit
     st.altair_chart(scatter_chart, use_container_width=True)
 
 
@@ -215,27 +195,23 @@ elif menu == "Relaciones entre Variables":
 elif menu == "Provincias con tasas destacadas":
     st.markdown("<div class='subtitulo'>Provincias con tasas más altas y más bajas</div>", unsafe_allow_html=True)
     
-    # Datos para las provincias con tasas más altas y más bajas
     top_tasas = tasas_provincias.head(3).reset_index().rename(columns={"tasa_hechos": "Tasa Promedio"})
     bottom_tasas = tasas_provincias.tail(3).reset_index().rename(columns={"tasa_hechos": "Tasa Promedio"})
     
-    # Concatenar ambos conjuntos para mostrarlos en el mismo gráfico
     tasas_destacadas = pd.concat([top_tasas, bottom_tasas])
     tasas_destacadas["Categoría"] = ["Alta"] * len(top_tasas) + ["Baja"] * len(bottom_tasas)
 
-    # Crear el gráfico de barras interactivo
     chart = alt.Chart(tasas_destacadas).mark_bar().encode(
         x=alt.X("Tasa Promedio:Q", title="Tasa Promedio de Delitos"),
         y=alt.Y("provincia_nombre:N", title="Provincias", sort="-x"),
-        color=alt.Color("Categoría:N", scale=alt.Scale(domain=["Alta", "Baja"], range=["#e63946", "#457b9d"])),  # Colores personalizados
-        tooltip=["provincia_nombre", "Tasa Promedio"]  # Mostrar detalles al pasar el cursor
+        color=alt.Color("Categoría:N", scale=alt.Scale(domain=["Alta", "Baja"], range=["#e63946", "#457b9d"])),  
+        tooltip=["provincia_nombre", "Tasa Promedio"]  
     ).properties(
         width=600,
         height=300,
         title="Provincias con Tasas de Delitos Más Altas y Más Bajas"
     )
 
-    # Mostrar el gráfico interactivo
     st.altair_chart(chart, use_container_width=True)
 
 
